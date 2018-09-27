@@ -27,17 +27,6 @@ import argparse, os
 from IPython import embed
 from mag.experiment import Experiment
 
-experiment = Experiment({"exp_name": 'test'},
-						experiments_dir='./experiments'
-						)
-
-config = experiment.config
-experiment.register_directory("distributions")
-experiment.register_directory("postTrainingAnalysis")
-experiment.register_directory("samples")
-experiment.register_directory("reconstructed_distribution")
-experiment.register_directory("invertedSamples")
-
 def logdensity_1(z):
 	z1, z2 = torch.split(z, [1,1], 1) 
 	norm = torch.sqrt(z1 ** 2 + z2 ** 2)
@@ -94,40 +83,15 @@ class VAE(object):
 						 activation=act),
 					flows.FlipFlow(1)) for i in range(num_flow_layers)])
 		
-		self.dec = nn.Sequential(
-				nn_.ResLinear(dimz,dimc),
-				act,
-				nn_.ResLinear(dimc,32*4*4),
-				act,
-				nn_.Reshape((-1,32,4,4)),
-				nn.Upsample(scale_factor=2,mode='bilinear'),
-				nn_.ResConv2d(32,32,3,1,padding=1,activation=act),
-				act,
-				nn_.ResConv2d(32,32,3,1,padding=1,activation=act),
-				act,
-				nn_.slicer[:,:,:-1,:-1],                
-				nn.Upsample(scale_factor=2,mode='bilinear'),
-				nn_.ResConv2d(32,16,3,1,padding=1,activation=act),
-				act,
-				nn_.ResConv2d(16,16,3,1,padding=1,activation=act),
-				act,
-				nn.Upsample(scale_factor=2,mode='bilinear'),
-				nn_.ResConv2d(16,1,3,1,padding=1,activation=act),
-				)
-
-		self.dec[-1].conv_01.bias.data.normal_(-3, 0.0001)
-
 		if self.cuda:
 			self.enc = self.enc.cuda()
 			self.inf = self.inf.cuda()
-			self.dec = self.dec.cuda()            
-		
+
 		
 		amsgrad = bool(args.amsgrad)
 		polyak = args.polyak
 		self.optim = optim.Adam(chain(self.enc.parameters(),
-									  self.inf.parameters(),
-									  self.dec.parameters()),
+									  self.inf.parameters()),
 								lr=args.lr, 
 								betas=(args.beta1, args.beta2),
 								amsgrad=amsgrad,
@@ -142,7 +106,8 @@ class VAE(object):
 		# z_samples = np.random.normal(0.0, 1.0, [config.batch_size,2])       
 		ep = utils.varify(np.random.randn(n,self.dimz).astype('float32'))
 		context = self.enc(ep)
-		
+
+		ep = utils.varify(np.random.randn(n,self.dimz).astype('float32'))	
 		lgd = utils.varify(np.zeros(n).astype('float32'))
 		if self.cuda:
 			ep = ep.cuda()
@@ -160,22 +125,7 @@ class VAE(object):
 		
 		return kl, kl
 		
-	def iwlb(self, x, niw=1):
-		LOSSES = list()
-		for i in range(niw):
-			LOSSES.append(sum(self.loss(x,1.0)[1:])[:,None].data.cpu().numpy())
-		return -utils.log_mean_exp_np(-np.concatenate(LOSSES, 1))
-		
-	def state_dict(self):
-		return self.enc.state_dict(), \
-			   self.inf.state_dict(), \
-			   self.dec.state_dict()
-
-	def load_state_dict(self, states):
-		self.enc.load_state_dict(states[0]) 
-		self.inf.load_state_dict(states[1])
-		self.dec.load_state_dict(states[2])       
-
+	
 	def clip_grad_norm(self):
 		nn.utils.clip_grad_norm(chain(self.inf.parameters()),
 								self.clip)
@@ -190,35 +140,10 @@ class model(object):
 
 		self.filename = filename
 		self.args = args        
-		if args.dataset == 'sb_mnist':
-			tr, va, te = load_bmnist_image()
-		elif args.dataset == 'db_mnist':
-			tr, va, te = load_mnist_image()
-		elif args.dataset == 'db_omniglot':
-			tr, va, te = load_omniglot_image()
-		else:
-			raise Exception('dataset {} not supported'.format(args.dataset))
 		
 		if args.final_mode:
 			tr = np.concatenate([tr, va], axis=0)
 			va = te[:]
-		
-		if args.dataset[:2] == 'db':
-			compose = transforms.Compose([from_numpy(), binarize()])
-			tr = DatasetWrapper(tr,compose)
-			va = DatasetWrapper(va,compose)
-			te = DatasetWrapper(te,compose)
-			
-		self.train_loader = data.DataLoader(tr, 
-											batch_size=args.batch_size,
-											shuffle=True)
-		self.valid_loader = data.DataLoader(va, 
-											batch_size=args.batch_size,
-											shuffle=False)
-		self.test_loader = data.DataLoader(te, 
-										   batch_size=args.batch_size,
-										   shuffle=False)
-		
 		
 		self.vae = VAE(args)
 		
@@ -250,13 +175,15 @@ class model(object):
 				print("Loss on iteration {}: {}".format(e , LOSSES/float(counter)))
 				zero = utils.varify(np.zeros(1).astype('float32'))
 				ep = utils.varify(np.random.randn(1000,self.dimz).astype('float32'))
+				context = self.vae.enc(ep)
 				lgd = utils.varify(np.zeros(1000).astype('float32'))
 				if self.cuda:
 					ep = ep.cuda()
 					lgd = lgd.cuda()
 					zero = zero.cuda()
 
-				context = self.vae.enc(ep)
+				ep = utils.varify(np.random.randn(1000,self.dimz).astype('float32'))	
+
 				output, _, _ = self.vae.inf((ep, lgd, context))
 				# embed()
 				plot_density_from_samples(			
@@ -270,33 +197,7 @@ class model(object):
 			KLS = 0
 			counter = 0
 
-		if not self.final_mode:
-			# loading best valid model (early stopping)
-			self.load(self.save_dir+'/'+self.filename+'_best')
-
-
-	def evaluate(self, dataloader, niw=1):
-		LOSSES = 0 
-		c = 0
-		for x in dataloader:
-			x = Variable(x).view(-1,1,28,28)
-			if self.cuda:
-				x = x.cuda()
-				
-			losses = self.vae.iwlb(x, niw)
-			LOSSES += losses.sum()
-			c += losses.shape[0]
-		return LOSSES / float(c)
-
-
-	def save(self, fn):        
-		torch.save(self.vae.state_dict(), fn+'_model.pt')
-		with open(fn+'_args.txt','w') as out:
-			out.write(json.dumps(self.args.__dict__,indent=4))
-
-	def load(self, fn):
-		self.vae.load_state_dict(torch.load(fn+'_model.pt'))
-			
+		
 
 # =============================================================================
 # main
@@ -379,6 +280,8 @@ def parse_args():
 	parser.add_argument('--num_ds_dim', type=int, default=16)
 	parser.add_argument('--num_ds_layers', type=int, default=1)
 	
+	parser.add_argument('--exp-name', type=str, default='temp',
+					help='experiment name')
 	
 	return check_args(parser.parse_args())
 
@@ -413,10 +316,6 @@ def check_args(args):
 
 """main"""
 def main():
-	# parse arguments
-	args = parse_args()
-	if args is None:
-		exit()
 
 	np.random.seed(args.seed)
 	torch.manual_seed(args.seed+10000)
@@ -447,11 +346,23 @@ def main():
 		mdl.train(args.epoch, args.anneal)
 		print(" [*] Training finished!")
 
-	print(" [**] Valid: %.4f" % mdl.evaluate(mdl.valid_loader, 2000))
-	print(" [**] Test: %.4f" % mdl.evaluate(mdl.test_loader, 2000))
 
-	print(" [*] Testing finished!")
 
+# parse arguments
+args = parse_args()
+if args is None:
+	exit()
+
+experiment = Experiment({"exp_name": args.exp_name},
+					experiments_dir='./experiments'
+					)
+
+config = experiment.config
+experiment.register_directory("distributions")
+experiment.register_directory("postTrainingAnalysis")
+experiment.register_directory("samples")
+experiment.register_directory("reconstructed_distribution")
+experiment.register_directory("invertedSamples")
 
 if __name__ == '__main__':
 	main()
