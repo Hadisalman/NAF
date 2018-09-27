@@ -8,8 +8,8 @@ LSUN
 https://github.com/fyu/lsun
 """
 
-import urllib
-import cPickle as pickle
+import urllib.request as urllib
+import pickle as pickle
 import os
 import struct
 import numpy as np
@@ -18,10 +18,10 @@ import time
 
 
 savedir = 'dataset/'
-mnist = False
+mnist = True
 cifar10 = False
 omniglot = False
-maf = True
+maf = False
 
 
 
@@ -204,7 +204,7 @@ def load_cifar10():
     dirname = "cifar-10-batches-py"
     origin = "http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
     path = get_file(dirname, origin=origin, untar=True)
-    print path
+    print (path)
     nb_train_samples = 50000
 
     X_train = np.zeros((nb_train_samples, 3, 32, 32), dtype="uint8")
@@ -212,7 +212,7 @@ def load_cifar10():
 
     for i in range(1, 6):
         fpath = os.path.join(path, 'data_batch_' + str(i))
-        print fpath
+        print(fpath)
         data, labels = load_batch(fpath)
         X_train[(i-1)*10000:i*10000, :, :, :] = data
         y_train[(i-1)*10000:i*10000] = labels
@@ -233,7 +233,7 @@ if __name__ == '__main__':
     
     
     if mnist:
-        print 'dynamically binarized mnist'
+        print('dynamically binarized mnist')
         mnist_filenames = ['train-images-idx3-ubyte', 't10k-images-idx3-ubyte']
         
         for filename in mnist_filenames:
@@ -246,7 +246,7 @@ if __name__ == '__main__':
             np.savetxt(local_filename,load_mnist_images_np(local_filename))
             os.remove(local_filename+'.gz')
 
-        print 'statically binarized mnist'
+        print('statically binarized mnist')
         subdatasets = ['train', 'valid', 'test']
         for subdataset in subdatasets:
             filename = 'binarized_mnist_{}.amat'.format(subdataset)

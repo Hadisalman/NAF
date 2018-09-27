@@ -26,6 +26,7 @@ import time
 import json
 import argparse, os
 
+from IPython import embed
 
 class VAE(object):
     
@@ -133,7 +134,8 @@ class VAE(object):
             ep = ep.cuda()
             lgd = lgd.cuda()
             zero = zero.cuda()
-            
+        
+        embed()    
         z, logdet, _ = self.inf((ep, lgd, context))
         pi = nn_.sigmoid(self.dec(z))
         
@@ -243,12 +245,12 @@ class model(object):
                 self.vae.optim.swap()
                 loss_val = self.evaluate(self.valid_loader, 1)
                 loss_tst = self.evaluate(self.test_loader, 1)       
-                print 'Epoch: [%4d/%4d] train <= %.2f %.2f %.2f ' \
+                print('Epoch: [%4d/%4d] train <= %.2f %.2f %.2f ' \
                       'valid: %.3f test: %.3f' % \
                 (e+1, epoch, LOSSES/float(counter), 
                  RECS/float(counter), KLS/float(counter),
                  loss_val,
-                 loss_tst), weight
+                 loss_tst), weight)
                 if loss_val < best_val:
                     print(' [^] Best validation loss [^] ... [saving]')
                     self.save(self.save_dir+'/'+self.filename+'_best')
@@ -300,7 +302,7 @@ def parse_args():
     desc = "VAE"
     parser = argparse.ArgumentParser(description=desc)
 
-    parser.add_argument('--dataset', type=str, default='db_omniglot', 
+    parser.add_argument('--dataset', type=str, default='sb_mnist', 
                         choices=['sb_mnist', 
                                  'db_mnist',
                                  'db_omniglot'],
@@ -335,8 +337,8 @@ def parse_args():
     
 
 
-    parser.add_argument('--dimz', type=int, default=32)
     parser.add_argument('--dimc', type=int, default=450)
+    parser.add_argument('--dimz', type=int, default=32)
     parser.add_argument('--dimh', type=int, default=1920)
     parser.add_argument('--flowtype', type=str, default='affine')
     parser.add_argument('--num_flow_layers', type=int, default=0)
@@ -386,8 +388,8 @@ def main():
     torch.manual_seed(args.seed+10000)
 
     fn = str(time.time()).replace('.','')
-    print args
-    print fn
+    print(args)
+    print(fn)
 
     print(" [*] Building model!")    
     old_fn = args.save_dir+'/'+args.fn+'_args.txt'
@@ -398,7 +400,7 @@ def main():
                          ['to_train','epoch','anneal'])
         args.__dict__.update(d)
         print(" New args:" )
-        print args
+        print(args)
         mdl = model(args, fn)
         print(" [*] Loading model!")
         mdl.load(args.save_dir+'/'+args.fn)
@@ -411,8 +413,8 @@ def main():
         mdl.train(args.epoch, args.anneal)
         print(" [*] Training finished!")
 
-    print " [**] Valid: %.4f" % mdl.evaluate(mdl.valid_loader, 2000)
-    print " [**] Test: %.4f" % mdl.evaluate(mdl.test_loader, 2000)
+    print(" [**] Valid: %.4f" % mdl.evaluate(mdl.valid_loader, 2000))
+    print(" [**] Test: %.4f" % mdl.evaluate(mdl.test_loader, 2000))
 
     print(" [*] Testing finished!")
 

@@ -6,7 +6,7 @@ Created on Sun Mar 19 16:47:13 2017
 
 PARAM_EXTENSION = 'params'
 
-import cPickle as pickle
+import pickle as pickle
 import numpy as np
 from sklearn.preprocessing import OneHotEncoder
 floatX = 'float32'

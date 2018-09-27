@@ -2,8 +2,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-import datasets
-import util
+from . import datasets
+from . import util
 
 
 class GAS:

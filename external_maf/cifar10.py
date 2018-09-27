@@ -1,10 +1,9 @@
-from itertools import izip
 import numpy as np
-import cPickle as pickle
+import pickle as pickle
 import matplotlib.pyplot as plt
 
-import datasets
-import util
+from . import datasets
+from . import util
 
 
 class CIFAR10:

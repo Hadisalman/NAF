@@ -2,8 +2,8 @@ import numpy as np
 import h5py
 import matplotlib.pyplot as plt
 
-import datasets
-import util
+from . import datasets
+from . import util
 
 
 class BSDS300:
