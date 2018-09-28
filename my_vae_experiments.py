@@ -73,7 +73,7 @@ class VAE(object):
 				)
 
 		
-		self.inf = nn.Sequential( 
+		self.inf = nn.Sequential(
 				# flows.LinearFlow(dimz, dimc),
 				*[nn_.SequentialFlow(
 					flow(dim=dimz,
@@ -82,7 +82,7 @@ class VAE(object):
 						 num_layers=2,
 						 activation=act),
 					flows.FlipFlow(1)) for i in range(num_flow_layers)])
-		
+		embed()
 		if self.cuda:
 			self.enc = self.enc.cuda()
 			self.inf = self.inf.cuda()
@@ -190,7 +190,7 @@ class model(object):
 					samples=output.data.numpy(),
 					directory=experiment.reconstructed_distribution,
 					iteration=e,
-					flow_length=0,
+					flow_length=args.num_flow_layers,
 					)
 
 			LOSSES = 0
@@ -243,7 +243,7 @@ def parse_args():
 								 'db_mnist',
 								 'db_omniglot'],
 						help='static/dynamic binarized mnist')
-	parser.add_argument('--epoch', type=int, default=9900, 
+	parser.add_argument('--epoch', type=int, default=20000, 
 						help='The number of epochs to run')
 	parser.add_argument('--batch_size', type=int, default=100, 
 						help='The size of batch')
@@ -276,8 +276,8 @@ def parse_args():
 	parser.add_argument('--dimc', type=int, default=2)
 	parser.add_argument('--dimh', type=int, default=2)
 	parser.add_argument('--flowtype', type=str, default='dsf')
-	parser.add_argument('--num_flow_layers', type=int, default=8)
-	parser.add_argument('--num_ds_dim', type=int, default=16)
+	parser.add_argument('--num_flow_layers', type=int, default=2)
+	parser.add_argument('--num_ds_dim', type=int, default=2)
 	parser.add_argument('--num_ds_layers', type=int, default=1)
 	
 	parser.add_argument('--exp-name', type=str, default='temp',
