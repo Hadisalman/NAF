@@ -74,9 +74,9 @@ class VAE(object):
                     flows.FlipFlow(1)) for i in range(num_flow_layers)])
         
         self.dec = nn.Sequential(
-                  torch.nn.Linear(dimz, dimh),
+                  torch.nn.Linear(dimz, dimc),
                   torch.nn.ReLU(),
-                  torch.nn.Linear(dimh, 784),
+                  torch.nn.Linear(dimc, 784),
                 )
 
         # self.dec[-1].conv_01.bias.data.normal_(-3, 0.0001)
@@ -235,8 +235,8 @@ class model(object):
                 tb_logger.scalar_summary('train/rec', RECS/float(counter), e)
                 tb_logger.scalar_summary('train/kl', KLS/float(counter), e)
                 
-                tb_logger.scalar_summary('valid/elbo', loss_val/float(counter), e)
-                tb_logger.scalar_summary('test/elbo', loss_tst/float(counter), e)
+                tb_logger.scalar_summary('valid/elbo', loss_val, e)
+                tb_logger.scalar_summary('test/elbo', loss_tst, e)
                 
                 LOSSES = 0
                 RECS = 0
@@ -323,8 +323,8 @@ def parse_args():
     parser.add_argument('--dimz', type=int, default=2)
     parser.add_argument('--dimc', type=int, default=64)
     parser.add_argument('--dimh', type=int, default=1000)
-    parser.add_argument('--flowtype', type=str, default='ddsf')
-    parser.add_argument('--num_flow_layers', type=int, default=2)
+    parser.add_argument('--flowtype', type=str, default='affine')
+    parser.add_argument('--num_flow_layers', type=int, default=0)
     parser.add_argument('--num_ds_dim', type=int, default=16)
     parser.add_argument('--num_ds_layers', type=int, default=1)
     
@@ -407,6 +407,3 @@ tb_logger = Logger(log_dir=args.log_dir, name='')
 
 if __name__ == '__main__':
     main(args)
-
-    
-    
