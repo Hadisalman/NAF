@@ -82,7 +82,7 @@ class VAE(object):
 						 num_layers=2,
 						 activation=act),
 					flows.FlipFlow(1)) for i in range(num_flow_layers)])
-		embed()
+
 		if self.cuda:
 			self.enc = self.enc.cuda()
 			self.inf = self.inf.cuda()
@@ -174,15 +174,15 @@ class model(object):
 			if e%300 == 0:
 				print("Loss on iteration {}: {}".format(e , LOSSES/float(counter)))
 				zero = utils.varify(np.zeros(1).astype('float32'))
-				ep = utils.varify(np.random.randn(1000,self.dimz).astype('float32'))
+				ep = utils.varify(np.random.randn(10000,self.dimz).astype('float32'))
 				context = self.vae.enc(ep)
-				lgd = utils.varify(np.zeros(1000).astype('float32'))
+				lgd = utils.varify(np.zeros(10000).astype('float32'))
 				if self.cuda:
 					ep = ep.cuda()
 					lgd = lgd.cuda()
 					zero = zero.cuda()
 
-				ep = utils.varify(np.random.randn(1000,self.dimz).astype('float32'))	
+				ep = utils.varify(np.random.randn(10000,self.dimz).astype('float32'))	
 
 				output, _, _ = self.vae.inf((ep, lgd, context))
 				# embed()
