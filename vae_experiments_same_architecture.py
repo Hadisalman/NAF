@@ -322,7 +322,7 @@ def parse_args():
 
     parser.add_argument('--dimz', type=int, default=2)
     parser.add_argument('--dimc', type=int, default=64)
-    parser.add_argument('--dimh', type=int, default=1000)
+    parser.add_argument('--dimh', type=int, default=100)
     parser.add_argument('--flowtype', type=str, default='affine')
     parser.add_argument('--num_flow_layers', type=int, default=0)
     parser.add_argument('--num_ds_dim', type=int, default=16)
